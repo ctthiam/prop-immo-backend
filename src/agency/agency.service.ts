@@ -105,4 +105,108 @@ export class AgencyService {
       data: { status: 'inactive' },
     });
   }
+  async getDashboardStats(agencyId: string) {
+  const [
+    totalOwners,
+    totalTenants,
+    totalProperties,
+    vacantProperties,
+    occupiedProperties,
+    activeContracts,
+    totalPaidThisMonth,
+    totalPendingPayments,
+    latePayments,
+    recentPayments,
+    workOrdersByStatus,
+  ] = await Promise.all([
+    this.prisma.owner.count({ where: { agencyId, isActive: true } }),
+    this.prisma.tenant.count({ where: { agencyId, isActive: true } }),
+    this.prisma.property.count({ where: { agencyId, status: { not: 'ARCHIVED' } } }),
+    this.prisma.property.count({ where: { agencyId, status: 'VACANT' } }),
+    this.prisma.property.count({ where: { agencyId, status: 'OCCUPIED' } }),
+    this.prisma.contract.count({ where: { agencyId, status: 'ACTIVE' } }),
+    this.prisma.rentPayment.aggregate({
+      where: {
+        agencyId,
+        status: 'PAID',
+        month: new Date().getMonth() + 1,
+        year: new Date().getFullYear(),
+      },
+      _sum: { amount: true },
+    }),
+    this.prisma.rentPayment.count({ where: { agencyId, status: 'PENDING' } }),
+    this.prisma.rentPayment.count({ where: { agencyId, status: 'LATE' } }),
+    this.prisma.rentPayment.findMany({
+      where: { agencyId, status: 'PAID' },
+      include: {
+        contract: {
+          select: {
+            tenant: { select: { firstName: true, lastName: true } },
+            property: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { paidAt: 'desc' },
+      take: 5,
+    }),
+    this.prisma.workOrder.groupBy({
+      by: ['status'],
+      where: { agencyId },
+      _count: { status: true },
+    }),
+  ]);
+
+  const last6Months = Array.from({ length: 6 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - i);
+    return { month: date.getMonth() + 1, year: date.getFullYear() };
+  }).reverse();
+
+  const monthlyRevenue = await Promise.all(
+    last6Months.map(async ({ month, year }) => {
+      const result = await this.prisma.rentPayment.aggregate({
+        where: { agencyId, status: 'PAID', month, year },
+        _sum: { amount: true },
+      });
+      const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+      return {
+        name: `${MONTHS[month - 1]} ${year}`,
+        montant: result._sum.amount || 0,
+      };
+    })
+  );
+
+  return {
+    kpis: {
+      totalOwners,
+      totalTenants,
+      totalProperties,
+      vacantProperties,
+      occupiedProperties,
+      activeContracts,
+      totalPaidThisMonth: totalPaidThisMonth._sum.amount || 0,
+      totalPendingPayments,
+      latePayments,
+    },
+    monthlyRevenue,
+    propertyStatus: [
+      { name: 'Occupés', value: occupiedProperties, color: '#27AE60' },
+      { name: 'Vacants', value: vacantProperties, color: '#D4A843' },
+    ],
+    workOrdersByStatus: workOrdersByStatus.map((w) => ({
+      status: w.status,
+      count: w._count.status,
+    })),
+    recentPayments: recentPayments.map((p) => ({
+      id: p.id,
+      reference: p.reference,
+      amount: p.amount,
+      month: p.month,
+      year: p.year,
+      paidAt: p.paidAt,
+      tenant: `${p.contract.tenant.firstName} ${p.contract.tenant.lastName}`,
+      property: p.contract.property.name,
+    })),
+  };
+}
 }

@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@prisma/client';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('agencies')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -49,5 +50,10 @@ export class AgencyController {
   @Roles(Role.SUPER_ADMIN)
   remove(@Param('id') id: string) {
     return this.agencyService.remove(id);
+  }
+  @Get('dashboard/stats')
+  @Roles(Role.ADMIN, Role.SECRETAIRE, Role.COMPTABLE)
+  getDashboardStats(@CurrentUser() user: any) {
+    return this.agencyService.getDashboardStats(user.agencyId);
   }
 }
