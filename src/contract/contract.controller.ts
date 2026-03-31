@@ -56,4 +56,11 @@ export class ContractController {
   terminate(@Param('id') id: string, @CurrentUser() user: any) {
     return this.contractService.terminate(id, user.agencyId);
   }
+
+  @Get(':id/pdf')
+  @Roles(Role.ADMIN, Role.SECRETAIRE)
+  generatePdf(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.contractService.generateContractPdf(id, user.agencyId);
+  }
+
 }

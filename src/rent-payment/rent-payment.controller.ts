@@ -64,4 +64,10 @@ export class RentPaymentController {
   markLate(@CurrentUser() user: any) {
     return this.rentPaymentService.markLate(user.agencyId);
   }
+
+  @Get(':id/quittance')
+  @Roles(Role.ADMIN, Role.SECRETAIRE, Role.COMPTABLE)
+  generateQuittance(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.rentPaymentService.generateQuittancePdf(id, user.agencyId);
+  }
 }

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentStatus } from '@prisma/client';
+import { PdfService } from '../pdf/pdf.service';
 
 export class CreateRentPaymentDto {
   contractId: string;
@@ -17,7 +18,11 @@ export class RecordPaymentDto {
 
 @Injectable()
 export class RentPaymentService {
-  constructor(private prisma: PrismaService) {}
+ 
+  constructor(
+    private prisma: PrismaService,
+    private pdfService: PdfService,
+  ) {}
 
   private generateReference(): string {
     const year = new Date().getFullYear();
@@ -188,4 +193,30 @@ export class RentPaymentService {
 
     return { message: `${result.count} paiement(s) marqué(s) en retard` };
   }
+
+  async generateQuittancePdf(id: string, agencyId: string) {
+  const payment = await this.prisma.rentPayment.findFirst({
+    where: { id, agencyId },
+    include: {
+      contract: {
+        include: {
+          property: true,
+          tenant: true,
+          agency: true,
+        },
+      },
+    },
+  });
+
+  if (!payment) {
+    throw new NotFoundException('Paiement introuvable');
+  }
+
+  if (payment.status !== 'PAID') {
+    throw new BadRequestException('La quittance ne peut être générée que pour un loyer payé');
+  }
+
+  const pdfBase64 = await this.pdfService.generateQuittancePdf(payment);
+  return { pdfBase64, filename: `quittance_${payment.reference}.pdf` };
+}
 }

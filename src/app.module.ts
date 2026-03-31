@@ -10,9 +10,10 @@ import { TenantModule } from './tenant/tenant.module';
 import { PropertyModule } from './property/property.module';
 import { ContractModule } from './contract/contract.module';
 import { RentPaymentModule } from './rent-payment/rent-payment.module';
+import { PdfModule } from './pdf/pdf.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, AgencyModule, OwnerModule, TenantModule, PropertyModule, ContractModule, RentPaymentModule],
+  imports: [PrismaModule, AuthModule, UsersModule, AgencyModule, OwnerModule, TenantModule, PropertyModule, ContractModule, RentPaymentModule, PdfModule],
   controllers: [AppController],
   providers: [AppService],
 })

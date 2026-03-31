@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ContractType, ContractStatus, PropertyStatus } from '@prisma/client';
+import { PdfService } from '../pdf/pdf.service';
 
 export class CreateContractDto {
   type: ContractType;
@@ -25,7 +26,11 @@ export class UpdateContractDto {
 
 @Injectable()
 export class ContractService {
-  constructor(private prisma: PrismaService) {}
+  
+  constructor(
+    private prisma: PrismaService,
+    private pdfService: PdfService,
+  ) {}
 
   private generateReference(): string {
     const year = new Date().getFullYear();
@@ -197,4 +202,23 @@ export class ContractService {
       },
     });
   }
+
+  async generateContractPdf(id: string, agencyId: string) {
+  const contract = await this.prisma.contract.findFirst({
+    where: { id, agencyId },
+    include: {
+      property: { include: { owner: true } },
+      tenant: true,
+      agency: true,
+    },
+  });
+
+  if (!contract) {
+    throw new NotFoundException('Contrat introuvable');
+  }
+
+  const pdfBase64 = await this.pdfService.generateContractPdf(contract);
+  return { pdfBase64, filename: `contrat_${contract.reference}.pdf` };
+}
+
 }
