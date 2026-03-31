@@ -67,6 +67,12 @@ export class PdfService {
     return buffer.toString('base64');
   }
 
+  async generateStatementPdf(data: any): Promise<string> {
+  const html = this.buildStatementHtml(data);
+  const buffer = await this.generatePdf(html);
+  return buffer.toString('base64');
+}
+
   private buildContractHtml(contract: any): string {
     const startDate = new Date(contract.startDate).toLocaleDateString('fr-FR', {
       day: 'numeric', month: 'long', year: 'numeric',
@@ -308,4 +314,183 @@ export class PdfService {
     </body>
     </html>`;
   }
+
+  private buildStatementHtml(data: any): string {
+  const { owner, agency, payments, expenses, period, managementFeeRate } = data;
+
+  const totalRents = payments.reduce((sum: number, p: any) => sum + p.amount, 0);
+  const totalExpenses = expenses.reduce((sum: number, e: any) => sum + e.amount, 0);
+  const managementFeeHT = totalRents * (managementFeeRate / 100);
+  const managementFeeTTC = managementFeeHT * 1.18;
+  const netAmount = totalRents - totalExpenses - managementFeeTTC;
+
+  const paymentsRows = payments.map((p: any) => `
+    <tr>
+      <td>${p.date}</td>
+      <td>${p.propertyName}</td>
+      <td>${p.tenantName}</td>
+      <td>${p.description}</td>
+      <td></td>
+      <td>${p.amount.toLocaleString('fr-FR')} F</td>
+    </tr>
+  `).join('');
+
+  const expenseRows = expenses.map((e: any) => `
+    <tr>
+      <td>${e.date}</td>
+      <td colspan="2">${e.description}</td>
+      <td></td>
+      <td>${e.amount.toLocaleString('fr-FR')} F</td>
+      <td></td>
+    </tr>
+  `).join('');
+
+  return `
+  <!DOCTYPE html>
+  <html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a1a; line-height: 1.5; }
+      .header { background: #1A3C5E; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+      .header h1 { font-size: 18px; font-weight: bold; }
+      .header p { font-size: 10px; opacity: 0.85; margin-top: 2px; }
+      .header .date { text-align: right; font-size: 10px; }
+      .title { text-align: center; margin-bottom: 16px; }
+      .title h2 { font-size: 14px; font-weight: bold; text-decoration: underline; text-transform: uppercase; color: #1A3C5E; }
+      .title p { font-size: 12px; color: #555; margin-top: 4px; }
+      .owner-info { background: #f0f5fa; border-left: 4px solid #1A3C5E; padding: 10px 14px; margin-bottom: 16px; }
+      .owner-info p { margin: 2px 0; }
+      .main-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+      .main-table th { background: #1A3C5E; color: white; padding: 7px 8px; text-align: left; font-size: 10px; }
+      .main-table td { padding: 5px 8px; border: 1px solid #ddd; font-size: 10px; }
+      .main-table tr:nth-child(even) td { background: #f8fafc; }
+      .section-header td { background: #2E86AB !important; color: white !important; font-weight: bold; }
+      .summary-table { width: 60%; margin-left: auto; border-collapse: collapse; margin-bottom: 20px; }
+      .summary-table td { padding: 6px 10px; border: 1px solid #ddd; font-size: 11px; }
+      .summary-table .label { font-weight: bold; background: #f0f5fa; }
+      .summary-table .total { background: #1A3C5E; color: white; font-weight: bold; font-size: 12px; }
+      .summary-table .net { background: #D4A843; color: white; font-weight: bold; font-size: 13px; }
+      .footer-text { font-size: 10px; color: #555; margin-bottom: 20px; font-style: italic; }
+      .signatures { display: flex; justify-content: space-between; margin-top: 30px; }
+      .signature-box { width: 45%; text-align: center; }
+      .signature-box p { font-weight: bold; margin-bottom: 50px; font-size: 11px; }
+      .signature-line { border-top: 1px solid #1a1a1a; padding-top: 6px; font-size: 10px; color: #666; }
+      .page-footer { margin-top: 20px; text-align: center; font-size: 9px; color: #aaa; border-top: 1px solid #eee; padding-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div>
+        <h1>${agency.name}</h1>
+        <p>${agency.address || ''}</p>
+        <p>Tél: ${agency.phone || ''} — ${agency.email || ''}</p>
+      </div>
+      <div class="date">
+        <p>Dakar, le ${new Date().toLocaleDateString('fr-FR')}</p>
+        <p style="margin-top:6px; font-weight:bold">RELEVÉ DE COMPTE</p>
+        <p>${period}</p>
+      </div>
+    </div>
+
+    <div class="title">
+      <h2>Relevé — ${owner.firstName} ${owner.lastName}</h2>
+      <p>Période : ${period}</p>
+    </div>
+
+    <div class="owner-info">
+      <p><strong>Propriétaire :</strong> ${owner.firstName} ${owner.lastName}</p>
+      <p><strong>Téléphone :</strong> ${owner.phone}</p>
+      ${owner.email ? `<p><strong>Email :</strong> ${owner.email}</p>` : ''}
+      ${owner.address ? `<p><strong>Adresse :</strong> ${owner.address}</p>` : ''}
+    </div>
+
+    <table class="main-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Bien</th>
+          <th>Locataire</th>
+          <th>Libellé</th>
+          <th>Débit</th>
+          <th>Crédit</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="section-header">
+          <td colspan="6">LOYERS REÇUS</td>
+        </tr>
+        ${paymentsRows}
+        ${expenseRows.length > 0 ? `
+        <tr class="section-header">
+          <td colspan="6">DÉPENSES</td>
+        </tr>
+        ${expenseRows}
+        ` : ''}
+        <tr class="section-header">
+          <td colspan="6">FRAIS DE GESTION</td>
+        </tr>
+        <tr>
+          <td>${new Date().toLocaleDateString('fr-FR')}</td>
+          <td colspan="2">Frais de gestion HT (${managementFeeRate}%)</td>
+          <td></td>
+          <td>${Math.round(managementFeeHT).toLocaleString('fr-FR')} F</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>${new Date().toLocaleDateString('fr-FR')}</td>
+          <td colspan="2">TVA 18%</td>
+          <td></td>
+          <td>${Math.round(managementFeeHT * 0.18).toLocaleString('fr-FR')} F</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td colspan="4" style="font-weight:bold">FRAIS DE GESTION TTC</td>
+          <td style="font-weight:bold">${Math.round(managementFeeTTC).toLocaleString('fr-FR')} F</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table class="summary-table">
+      <tr>
+        <td class="label">TOTAL LOYERS REÇUS</td>
+        <td>${totalRents.toLocaleString('fr-FR')} F</td>
+      </tr>
+      <tr>
+        <td class="label">DÉPENSES</td>
+        <td>${totalExpenses.toLocaleString('fr-FR')} F</td>
+      </tr>
+      <tr>
+        <td class="label">FRAIS DE GESTION TTC</td>
+        <td>${Math.round(managementFeeTTC).toLocaleString('fr-FR')} F</td>
+      </tr>
+      <tr class="net">
+        <td>NET À PAYER</td>
+        <td>${Math.round(netAmount).toLocaleString('fr-FR')} F</td>
+      </tr>
+    </table>
+
+    <p class="footer-text">
+      NB : FG TTC = Loyers reçus × ${managementFeeRate}% en sus TVA 18%
+    </p>
+
+    <div class="signatures">
+      <div class="signature-box">
+        <p>La Direction</p>
+        <div class="signature-line">Signature et cachet</div>
+      </div>
+      <div class="signature-box">
+        <p>Le Propriétaire</p>
+        <div class="signature-line">Accusé de réception</div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <p>${agency.name} — Relevé généré le ${new Date().toLocaleDateString('fr-FR')}</p>
+    </div>
+  </body>
+  </html>`;
+}
 }
