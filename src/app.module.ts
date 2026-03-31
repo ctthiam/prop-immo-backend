@@ -12,9 +12,11 @@ import { ContractModule } from './contract/contract.module';
 import { RentPaymentModule } from './rent-payment/rent-payment.module';
 import { PdfModule } from './pdf/pdf.module';
 import { StatementModule } from './statement/statement.module';
+import { ProviderModule } from './provider/provider.module';
+import { WorkOrderModule } from './work-order/work-order.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, AgencyModule, OwnerModule, TenantModule, PropertyModule, ContractModule, RentPaymentModule, PdfModule, StatementModule],
+  imports: [PrismaModule, AuthModule, UsersModule, AgencyModule, OwnerModule, TenantModule, PropertyModule, ContractModule, RentPaymentModule, PdfModule, StatementModule, ProviderModule, WorkOrderModule],
   controllers: [AppController],
   providers: [AppService],
 })

@@ -26,6 +26,8 @@ model Agency {
   properties Property[]
   contracts  Contract[]
   rentPayments  RentPayment[]
+  workOrders  WorkOrder[]
+  providers   Provider[]
 }
 
 model User {
@@ -97,6 +99,7 @@ model Property {
   agency      Agency         @relation(fields: [agencyId], references: [id])
   owner       Owner          @relation(fields: [ownerId], references: [id])
   contracts   Contract[]
+  workOrders  WorkOrder[]
 }
 
 model Contract {
@@ -175,5 +178,48 @@ enum PaymentStatus {
   PENDING
   PAID
   LATE
+  CANCELLED
+}
+
+model Provider {
+  id         String      @id @default(uuid())
+  name       String
+  type       String
+  phone      String
+  email      String?
+  address    String?
+  agencyId   String
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  agency     Agency      @relation(fields: [agencyId], references: [id])
+  workOrders WorkOrder[]
+}
+
+model WorkOrder {
+  id          String          @id @default(uuid())
+  reference   String          @unique
+  title       String
+  description String
+  status      WorkOrderStatus @default(PENDING)
+  priority    String          @default("NORMAL")
+  cost        Float?
+  agencyId    String
+  propertyId  String
+  providerId  String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  agency      Agency          @relation(fields: [agencyId], references: [id])
+  property    Property        @relation(fields: [propertyId], references: [id])
+  provider    Provider?       @relation(fields: [providerId], references: [id])
+}
+
+enum WorkOrderStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
   CANCELLED
 }
