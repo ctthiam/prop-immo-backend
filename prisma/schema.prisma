@@ -28,6 +28,7 @@ model Agency {
   rentPayments  RentPayment[]
   workOrders  WorkOrder[]
   providers   Provider[]
+  messages    Message[]
 }
 
 model User {
@@ -44,6 +45,9 @@ model User {
   updatedAt DateTime @updatedAt
 
   agency    Agency?  @relation(fields: [agencyId], references: [id])
+
+  sentMessages      Message[] @relation("SentMessages")
+  receivedMessages  Message[] @relation("ReceivedMessages")
 }
 
 model Owner {
@@ -222,4 +226,18 @@ enum WorkOrderStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  content    String
+  isRead     Boolean  @default(false)
+  senderId   String
+  receiverId String
+  agencyId   String
+  createdAt  DateTime @default(now())
+
+  agency     Agency   @relation(fields: [agencyId], references: [id])
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
