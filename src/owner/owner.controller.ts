@@ -56,4 +56,15 @@ export class OwnerController {
   remove(@Param('id') id: string, @CurrentUser() user: any) {
     return this.ownerService.remove(id, user.agencyId);
   }
+  @Post(':id/portal-access')
+@Roles(Role.ADMIN)
+createPortalAccess(@Param('id') id: string, @CurrentUser() user: any) {
+  return this.ownerService.createPortalAccess(id, user.agencyId, (this.ownerService as any).prisma);
+}
+
+@Get('portal/dashboard')
+@Roles(Role.PROPRIETAIRE)
+getPortalDashboard(@CurrentUser() user: any) {
+  return this.ownerService.getPortalDashboard(user.id, user.agencyId);
+}
 }
