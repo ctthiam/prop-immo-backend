@@ -66,7 +66,7 @@ export class RentPaymentController {
   }
 
   @Get(':id/quittance')
-  @Roles(Role.ADMIN, Role.SECRETAIRE, Role.COMPTABLE)
+  @Roles(Role.ADMIN, Role.SECRETAIRE, Role.COMPTABLE, Role.LOCATAIRE)
   generateQuittance(@Param('id') id: string, @CurrentUser() user: any) {
     return this.rentPaymentService.generateQuittancePdf(id, user.agencyId);
   }

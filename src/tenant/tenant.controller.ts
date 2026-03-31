@@ -56,4 +56,15 @@ export class TenantController {
   remove(@Param('id') id: string, @CurrentUser() user: any) {
     return this.tenantService.remove(id, user.agencyId);
   }
+  @Post(':id/portal-access')
+@Roles(Role.ADMIN, Role.SECRETAIRE)
+createPortalAccess(@Param('id') id: string, @CurrentUser() user: any) {
+  return this.tenantService.createPortalAccess(id, user.agencyId);
+}
+
+@Get('portal/dashboard')
+@Roles(Role.LOCATAIRE)
+getPortalDashboard(@CurrentUser() user: any) {
+  return this.tenantService.getPortalDashboard(user.id, user.agencyId);
+}
 }
