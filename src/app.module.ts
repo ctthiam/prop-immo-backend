@@ -15,9 +15,10 @@ import { StatementModule } from './statement/statement.module';
 import { ProviderModule } from './provider/provider.module';
 import { WorkOrderModule } from './work-order/work-order.module';
 import { MessagingModule } from './messaging/messaging.module';
+import { TeamModule } from './team/team.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, AgencyModule, OwnerModule, TenantModule, PropertyModule, ContractModule, RentPaymentModule, PdfModule, StatementModule, ProviderModule, WorkOrderModule, MessagingModule],
+  imports: [PrismaModule, AuthModule, UsersModule, AgencyModule, OwnerModule, TenantModule, PropertyModule, ContractModule, RentPaymentModule, PdfModule, StatementModule, ProviderModule, WorkOrderModule, MessagingModule, TeamModule],
   controllers: [AppController],
   providers: [AppService],
 })
